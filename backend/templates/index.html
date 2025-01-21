@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!-- <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -126,4 +126,146 @@
         }
     </script>
 </body>
+</html> -->
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EULA Analyzer</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+        }
+        .container {
+            max-width: 600px;
+            margin: auto;
+        }
+        textarea {
+            width: 100%;
+            height: 200px;
+            margin-bottom: 20px;
+            padding: 10px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:disabled {
+            background-color: #cccccc;
+        }
+        .result {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #f9f9f9;
+        }
+        .error {
+            color: red;
+        }
+        canvas {
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>EULA Analyzer</h1>
+        <textarea id="eulaInput" placeholder="Paste the EULA content here..."></textarea>
+        <button id="analyzeButton">Analyze</button>
+        <div id="result" class="result"></div>
+        <canvas id="visualization"></canvas>
+    </div>
+    <script>
+        document.getElementById('analyzeButton').addEventListener('click', async () => {
+            const eulaContent = document.getElementById('eulaInput').value;
+            const resultDiv = document.getElementById('result');
+            const canvas = document.getElementById('visualization');
+            resultDiv.innerHTML = '';
+            canvas.style.display = 'none';
+
+            if (!eulaContent.trim()) {
+                resultDiv.innerHTML = '<p class="error">Please enter EULA content.</p>';
+                return;
+            }
+
+            try {
+                const response = await fetch('/analyze', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ text: eulaContent })
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server error: ${response.status}`);
+                }
+
+                const data = await response.json();
+
+                if (data.success) {
+                    resultDiv.innerHTML = `
+                        <p><strong>Prediction:</strong> ${data.prediction}</p>
+                        <p><strong>Probability:</strong> ${data.probability.toFixed(2)}%</p>
+                        <p><strong>Details:</strong> Length: ${data.details.textLength}, Words: ${data.details.wordCount}, Timestamp: ${data.details.timestamp}</p>
+                    `;
+                    
+                    // Visualization logic
+                    const ctx = canvas.getContext('2d');
+                    canvas.style.display = 'block';
+
+                    // Destroy any existing chart
+                    if (window.myChart) {
+                        window.myChart.destroy();
+                    }
+
+                    window.myChart = new Chart(ctx, {
+                        type: 'pie',
+                        data: {
+                            labels: ['Positive Probability', 'Remaining'],
+                            datasets: [{
+                                label: 'Analysis Probability',
+                                data: [data.probability, 100 - data.probability],
+                                backgroundColor: ['#4CAF50', '#FFC107'],
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            plugins: {
+                                legend: {
+                                    position: 'top'
+                                },
+                                title: {
+                                    display: true,
+                                    text: 'Analysis Probability Distribution'
+                                }
+                            }
+                        }
+                    });
+                } else {
+                    throw new Error(data.error || 'Unknown error');
+                }
+            } catch (error) {
+                resultDiv.innerHTML = `<p class="error">Error: ${error.message}</p>`;
+            }
+        });
+    </script>
+</body>
 </html>
+
+
+
+
